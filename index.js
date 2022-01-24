@@ -3,6 +3,7 @@
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 import { moduleName, moduleTag } from './scripts/constants.js';
 import { TemplatePlacer } from './scripts/generateTemplate.js';
+import { registerSettings } from './scripts/settings.js';
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //                                     Main Hooks
@@ -11,12 +12,12 @@ Hooks.once('init', async function () {
 	console.log(`${moduleTag} | Initializing.`);
 
 	// Register Settings
-
+	await registerSettings();
 	console.log(`${moduleTag} | Registered Settings`);
 });
 
 Hooks.once('setup', async function () {
-	console.log(`${moduleTag} | Setup.`);
+	console.log(`${moduleTag} | Setup Complete.`);
 });
 
 Hooks.once('ready', async function () {

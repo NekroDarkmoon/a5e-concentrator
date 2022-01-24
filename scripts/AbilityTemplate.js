@@ -17,7 +17,6 @@ export const templateType = {
 export class AbilityTemplate extends MeasuredTemplate {
 	static fromItem(item) {
 		const target = getProperty(item.data, 'data.target') || {};
-		console.log(target);
 		const templateShape = templateType[target.shape];
 		if (!templateShape) return;
 

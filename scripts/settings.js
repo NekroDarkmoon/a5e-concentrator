@@ -8,7 +8,7 @@ import { moduleName, moduleTag } from './constants.js';
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 export async function registerSettings() {
 	// Settings for automatic template placement
-	await game.settings.set(moduleName, 'generateTemplate', {
+	await game.settings.register(moduleName, 'generateTemplate', {
 		name: 'Place template on item use.',
 		scope: 'world',
 		config: true,
@@ -17,7 +17,7 @@ export async function registerSettings() {
 	});
 
 	// Settings for auto  template targeting
-	await game.settings.set(moduleName, 'autoTarget', {
+	await game.settings.register(moduleName, 'autoTarget', {
 		name: 'Automatically target actors in a template.',
 		scope: 'world',
 		config: true,
@@ -33,7 +33,7 @@ export async function registerSettings() {
 	});
 
 	// Settings for auto un-targeting
-	await game.settings.set(moduleName, 'removeTargets', {
+	await game.settings.register(moduleName, 'removeTargets', {
 		name: 'Untarget actors at end of turn',
 		scope: 'world',
 		config: true,

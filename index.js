@@ -2,6 +2,7 @@
 //                               Imports and Constants
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 import { moduleName, moduleTag } from './scripts/constants.js';
+import { TemplatePlacer } from './scripts/generateTemplate.js';
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //                                     Main Hooks
@@ -19,39 +20,33 @@ Hooks.once('setup', async function () {
 });
 
 Hooks.once('ready', async function () {
-	// Enable Hit Check and damage application
+	// Add Temporary Option for placing templates
+	new TemplatePlacer();
+
+	// Template Targeting
 
 	console.log(`${moduleTag} | Ready.`);
 
 	libWrapper.register(
 		moduleName,
-		'CONFIG.Actor.documentClass.prototype.activate',
+		'CONFIG.Actor.documentClass.prototype.constructItemCard',
 		dummyHook,
 		'WRAPPER'
 	);
 });
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-//                                   Chat Hooks
-// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-
-// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //                                   Dummy Hooks
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-function dummyHook(wrapped) {
-	const item = this;
-	const actor = this.actor;
-  const itemData = item.data.data;
+function dummyHook(wrapped, data) {
+	const actor = this.data;
+	const item = actor.items.get(data.id);
+	const itemData = item.data.data;
 
-  console.log(item);
-  console.log(actor);
-  console.log(itemData);
-
-	if (itemData.savingThrow) {
+	if (data.actionOptions?.includes('savingThrow')) {
 		const save = itemData.savingThrow;
-		Hooks.call('saveItemRolled', item, save, actor, data);
+		Hooks.call(`${moduleName}.saveItemRolled`, item, save, actor, data);
 	}
 
-	return wrapped();
+	return wrapped(data);
 }

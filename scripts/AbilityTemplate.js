@@ -3,7 +3,7 @@
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 import { moduleName, moduleTag } from './constants.js';
 
-const templateType = {
+export const templateType = {
 	cone: 'cone',
 	cube: 'rect',
 	cylinder: 'circle',

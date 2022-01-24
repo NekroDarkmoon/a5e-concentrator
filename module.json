@@ -1,31 +1,36 @@
 {
-  "name": "module",
-  "title": "New Module",
+  "name": "a5e-template-helpers",
+  "title": "A5E Template Helpers",
   "description": "",
   "version": "This is auto replaced",
   "library": "false",
   "manifestPlusVersion": "1.0.0",
   "minimumCoreVersion": "9",
+  "minimumSystemVersion": "0.3.0",
   "compatibleCoreVersion": "9",
   "authors": [
     {
-      "name": "The League of Extraordinary FVTT Developers",
-      "url": "https://github.com/League-of-Foundry-Developers",
-      "discord": "discordID#0001"
+      "name": "NekroDarkmoon",
+      "url": "https://github.com/NekroDarkmoon/",
+      "discord": "Nekro Darkmoon#2995",
+      "ko-fi": "https://ko-fi.com/nekrodarkmoon"
     }
   ],
   "dependencies": [
-
-  ],
-  "conflicts": [
-    
+    {
+    "name": "a5e",
+    "manifest": "https://raw.githubusercontent.com/Pjb518/FoundryVTT-Level-Up-Official/main/public/system.json",
+    "type": "system"
+    },
+    {
+      "name": "lib-wrapper",
+      "type": "module"
+    }
   ],
   "esmodules": [
-    "/scripts/module.js"
+    "./index.js"
   ],
-  "scripts": [
-    "/scripts/lib/lib.js"
-  ],
+  "scripts": [],
   "styles": [
     "/styles/module.css"
   ],

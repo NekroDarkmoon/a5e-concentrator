@@ -1,6 +1,6 @@
 {
-  "name": "a5e-template-helpers",
-  "title": "A5E Template Helpers",
+  "name": "a5e-concentrator",
+  "title": "A5E Concentrator",
   "description": "",
   "version": "This is auto replaced",
   "library": "false",
@@ -32,7 +32,7 @@
   ],
   "scripts": [],
   "styles": [
-    "/styles/module.css"
+    "/styles/concentrator.css"
   ],
   "languages": [
     {

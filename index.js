@@ -4,6 +4,15 @@
 const moduleName = 'a5e-concentrator';
 const moduleTag = 'A5E Concentrator';
 
+const effect = {
+	changes: [],
+	duration: {},
+	flags: {},
+	icon: 'icons/svg/aura.svg',
+	id: 'concentration',
+	label: 'Concentration',
+};
+
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //                                     Main Hooks
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -13,6 +22,9 @@ Hooks.once('init', async function () {
 
 Hooks.once('setup', async function () {
 	console.log(`${moduleTag} | Setup Complete.`);
+
+	// Add statusEffect
+	CONFIG.statusEffects.push(effect);
 });
 
 Hooks.once('ready', async function () {
@@ -52,10 +64,9 @@ class Concentrator {
 		Hooks.on('a5e-longRest', this._onLongRest.bind(this));
 	}
 
+	// =================================================================
+	//                       Handle Concentration
 	async _handleConcentration(_actor, _item) {
-		console.log(_actor);
-		console.log(_item);
-
 		// Check if actor is concentrating
 		const preFlags = _actor.getFlag(moduleName, 'concentrationData');
 		let isConcentrating = false;
@@ -65,7 +76,7 @@ class Concentrator {
 
 		if (isConcentrating) {
 			// Drop concentration on old
-			const msg = `${_actor.data.name} dropped concentration on ${preFlags.name} `;
+			const msg = `${_actor.data.name} dropped concentration on ${preFlags.name}.`;
 			const msgData = {
 				speaker: { alias: 'Concentrator' },
 				content: msg,
@@ -74,21 +85,24 @@ class Concentrator {
 
 			setTimeout(async _ => await ChatMessage.create(msgData), 0);
 
-			// TODO: Remove template and effects in the future.
+			// Remove template and effects in the future.
+			await this._toggle_effect(_actor, false);
 		}
 
 		// Create flag data
 		const concentrationData = {
 			name: `${_item.data.name}`,
 			isConcentrating: true,
-			// duration: data.data.duration?,
 		};
 
 		// Update Flags, effects and Send Message.
 		await _actor.setFlag(moduleName, 'concentrationData', concentrationData);
-		// TODO: Update effects in the future.
+		// Update effects in the future.
+		await this._toggle_effect(_actor, true);
 	}
 
+	// =================================================================
+	//                       			On damage
 	async _onDamaged(actor, damage) {
 		// Check if concentrating.
 		const preFlags = actor.getFlag(moduleName, 'concentrationData');
@@ -97,27 +111,112 @@ class Concentrator {
 		if (!preFlags?.isConcentrating) return;
 
 		// Roll for concentration.
-		const checkData = await actor.rollSavingThrow('con');
-		console.log(checkData);
+		const roll = await this._roll_concentration(actor);
 
-		if (!checkData) return;
+		let msg = '';
+		const hp = actor.data.data.attributes.hp.value;
+		if (roll.total >= Math.max(10, Math.floor(damage / 2)) && hp > 0)
+			msg += `Still maintaining concentration on ${preFlags.name}`;
+		else {
+			msg += `Concentration on ${preFlags?.name} broken.`;
+			await actor.unsetFlag(moduleName, 'concentrationData');
+			// Remove effect
+			await this._toggle_effect(actor, false);
+		}
+
+		const msgData = {
+			speaker: { alias: 'Concentrator' },
+			content: msg,
+			type: CONST.CHAT_MESSAGE_TYPES.OTHER,
+		};
+
+		setTimeout(async _ => await ChatMessage.create(msgData), 0);
 	}
 
+	// =================================================================
+	//                       On Long Rest
 	async _onLongRest(actor) {
 		// Reset data
 		await actor.unsetFlag(moduleName, 'concentrationData');
+		// Remove effect
+		await this._toggle_effect(actor, false);
 	}
+
+	// =================================================================
+	//                       Roll Concentration
+	async _toggle_effect(actor, trigger) {
+		const token = actor.parent;
+
+		// Check if already active
+		const statusEffects = actor.data.effects;
+		let exists = false;
+
+		statusEffects.forEach(e => {
+			const id = e?.data?.flags?.core?.statusId;
+			if (id === 'concentration') exists = true;
+		});
+
+		if (exists === trigger) return;
+
+		await token.toggleActiveEffect(effect);
+	}
+
+	// =================================================================
+	//                       Roll Concentration
+	async _roll_concentration(actor) {
+		const dialogTitle = game.i18n.format('A5E.SavingThrowPromptTitle', {
+			name: this.name,
+			ability: game.i18n.localize(CONFIG.A5E.abilities['con']),
+		});
+
+		const checkData = await game.a5e.utils.getDialogData(
+			game.a5e.vue.AbilityDialog,
+			{
+				title: dialogTitle,
+				props: {
+					actor,
+					ability: 'con',
+					isSave: true,
+					isConcentrationCheck: true,
+				},
+			}
+		);
+
+		if (checkData === null) return;
+
+		const { formula } = checkData;
+		const roll = await new CONFIG.Dice.D20Roll(formula).roll({ async: true });
+
+		const chatData = {
+			user: game.user?.id,
+			speaker: ChatMessage.getSpeaker({ actor }),
+			type: CONST.CHAT_MESSAGE_TYPES.ROLL,
+			sound: CONFIG.sounds.dice,
+			roll,
+			content: await renderTemplate(
+				'systems/a5e/templates/chat/ability-check.hbs',
+				{
+					title: game.i18n.format('A5E.SavingThrowSpecific', {
+						ability: game.i18n.localize(CONFIG.A5E.abilities['con']),
+					}),
+					img: this.img,
+					formula: roll.formula,
+					tooltip: await roll.getTooltip(),
+					total: roll.total,
+				}
+			),
+		};
+
+		ChatMessage.create(chatData);
+		return roll;
+	}
+	// TODO: On effect add and remove
 }
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //                                   	Concentrator
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-//                                   	Concentrator
-// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-//                                   	Concentrator
-// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //                                   	 Dummy Hooks
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

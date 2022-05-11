@@ -4,6 +4,7 @@
 const moduleName = 'a5e-concentrator';
 const moduleTag = 'A5E Concentrator';
 
+let socket;
 const effect = {
 	changes: [],
 	duration: {},
@@ -25,6 +26,11 @@ Hooks.once('setup', async function () {
 
 	// Add statusEffect
 	CONFIG.statusEffects.push(effect);
+});
+
+Hooks.once('socketlib.ready', () => {
+	socket = socketlib.registerModule(moduleName);
+	socket.register('rollConcentration', Concentrator.rollConcentration);
 });
 
 Hooks.once('ready', async function () {
@@ -60,8 +66,11 @@ Hooks.once('ready', async function () {
 class Concentrator {
 	constructor() {
 		Hooks.on('a5e-concentrationRolled', this._handleConcentration.bind(this));
+
+		// if (game.user.isGM) {
 		Hooks.on('a5e-damageTaken', this._onDamaged.bind(this));
 		Hooks.on('a5e-longRest', this._onLongRest.bind(this));
+		// }
 	}
 
 	// =================================================================
@@ -111,7 +120,18 @@ class Concentrator {
 		if (!preFlags?.isConcentrating) return;
 
 		// Roll for concentration.
-		const roll = await this._roll_concentration(actor);
+		let roll = null;
+
+		if (actor.data.type == 'character') {
+			const user = game.users.filter(u => u.data.character === actor.id)[0];
+			const userId = user?.active ? user.data._id : null;
+
+			if (!userId) roll = await Concentrator.rollConcentration(actor);
+			else
+				roll = await socket.executeAsUser('rollConcentration', userId, actor);
+		} else {
+			roll = await Concentrator.rollConcentration(actor);
+		}
 
 		let msg = '';
 		const hp = actor.data.data.attributes.hp.value;
@@ -145,7 +165,13 @@ class Concentrator {
 	// =================================================================
 	//                       Roll Concentration
 	async _toggle_effect(actor, trigger) {
-		const token = actor.parent;
+		let token;
+
+		if (actor.data.type === 'npc') token = actor.parent;
+		else
+			token = canvas.scene.tokens.filter(
+				t => t.data.actorId === actor.data._id
+			)[0];
 
 		// Check if already active
 		const statusEffects = actor.data.effects;
@@ -163,9 +189,10 @@ class Concentrator {
 
 	// =================================================================
 	//                       Roll Concentration
-	async _roll_concentration(actor) {
+	static async rollConcentration(actor) {
+		console.log(actor);
 		const dialogTitle = game.i18n.format('A5E.SavingThrowPromptTitle', {
-			name: this.name,
+			name: actor.name,
 			ability: game.i18n.localize(CONFIG.A5E.abilities['con']),
 		});
 
@@ -199,7 +226,7 @@ class Concentrator {
 					title: game.i18n.format('A5E.SavingThrowSpecific', {
 						ability: game.i18n.localize(CONFIG.A5E.abilities['con']),
 					}),
-					img: this.img,
+					img: actor.img,
 					formula: roll.formula,
 					tooltip: await roll.getTooltip(),
 					total: roll.total,

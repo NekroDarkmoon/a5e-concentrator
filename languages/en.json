@@ -1,3 +1,6 @@
 {
-    "MODULE.hello": "hello"
+    "concentrator.effectLabel": "Concentration",
+    "concentrator.manualEffectLabel": "Manual Effect",
+    "concentrator.droppedMessage": "{name} dropped concentration on {item}.",
+    "concentrator.maintainedMessage": "{name} maintained concentration on {item}."
 }

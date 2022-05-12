@@ -5,14 +5,7 @@ const moduleName = 'a5e-concentrator';
 const moduleTag = 'A5E Concentrator';
 
 let socket;
-const effect = {
-	changes: [],
-	duration: {},
-	flags: {},
-	icon: 'icons/svg/aura.svg',
-	id: 'concentration',
-	label: 'Concentration',
-};
+let effect;
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //                                     Main Hooks
@@ -25,6 +18,14 @@ Hooks.once('setup', async function () {
 	console.log(`${moduleTag} | Setup Complete.`);
 
 	// Add statusEffect
+	effect = {
+		changes: [],
+		duration: {},
+		flags: {},
+		icon: 'icons/svg/aura.svg',
+		id: 'concentration',
+		label: game.i18n.localize('concentrator.effectLabel'),
+	};
 	CONFIG.statusEffects.push(effect);
 });
 
@@ -85,7 +86,11 @@ class Concentrator {
 
 		if (isConcentrating) {
 			// Drop concentration on old
-			const msg = `${actor.data.name} dropped concentration on ${preFlags.name}.`;
+			const msg = game.i18n.format('concentrator.droppedMessage', {
+				name: actor.data.name,
+				item: preFlags.name,
+			});
+
 			const msgData = {
 				speaker: { alias: 'Concentrator' },
 				content: msg,
@@ -143,9 +148,15 @@ class Concentrator {
 
 		let msg = '';
 		if (roll.total >= Math.max(10, Math.floor(damage / 2)))
-			msg += `${actor.data.name} maintained concentration on ${preFlags.name}`;
+			msg = game.i18n.format('concentrator.maintainedMessage', {
+				name: actor.data.name,
+				item: preFlags.name,
+			});
 		else {
-			msg += `${actor.data.name} dropped concentration on ${preFlags?.name}.`;
+			msg = game.i18n.format('concentrator.droppedMessage', {
+				name: actor.data.name,
+				item: preFlags.name,
+			});
 			await actor.unsetFlag(moduleName, 'concentrationData');
 			// Remove effect
 			await this._toggle_effect(actor, false);
@@ -173,7 +184,7 @@ class Concentrator {
 
 		// Create flag data
 		const concentrationData = {
-			name: 'Manual Effect',
+			name: game.i18n.localize('concentrator.manualEffectLabel'),
 			isConcentrating: true,
 		};
 

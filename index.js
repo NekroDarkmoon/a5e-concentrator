@@ -28,6 +28,7 @@ Hooks.once('setup', async function () {
 	CONFIG.statusEffects.push(effect);
 });
 
+// Add Socket Information
 Hooks.once('socketlib.ready', () => {
 	socket = socketlib.registerModule(moduleName);
 	socket.register('rollConcentration', Concentrator.rollConcentration);
@@ -68,6 +69,8 @@ class Concentrator {
 		Hooks.on('a5e-concentrationRolled', this._handleConcentration.bind(this));
 		Hooks.on('a5e-damageTaken', this._onDamaged.bind(this));
 		Hooks.on('a5e-longRest', this._onLongRest.bind(this));
+		Hooks.on('createActiveEffect', this._onApplyManualEffect.bind(this));
+		Hooks.on('deleteActiveEffect', this._onRemoveManualEffect.bind(this));
 	}
 
 	// =================================================================
@@ -155,6 +158,36 @@ class Concentrator {
 		};
 
 		setTimeout(async _ => await ChatMessage.create(msgData), 0);
+	}
+
+	// =================================================================
+	//               On Add Active Effect - Manual
+	async _onApplyManualEffect(activeEffect, options, id) {
+		// Check if effect is concentration
+		if (activeEffect.data.flags?.core?.statusId !== 'concentration') return;
+		console.log('yay');
+	}
+
+	// =================================================================
+	//               On Remove Active Effect - Manual
+	async _onRemoveManualEffect(activeEffect, options, id) {
+		// Check if effect is concentration
+		if (activeEffect.data.flags?.core?.statusId !== 'concentration') return;
+		console.log('yay');
+		const actor = activeEffect.parent;
+
+		// Remove flag if concentrating.
+		const preFlags = actor.getFlag(moduleName, 'concentrationData');
+		const isConcentrating = preFlags?.isConcentrating
+			? preFlags.isConcentrating
+			: false;
+
+		// Remove Flag
+		if (isConcentrating) {
+			await actor.unsetFlag(moduleName, 'concentrationData');
+			console.log(`Removed concentration on ${actor.data.name}.`);
+		}
+		return;
 	}
 
 	// =================================================================

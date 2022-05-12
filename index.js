@@ -67,10 +67,8 @@ class Concentrator {
 	constructor() {
 		Hooks.on('a5e-concentrationRolled', this._handleConcentration.bind(this));
 
-		// if (game.user.isGM) {
 		Hooks.on('a5e-damageTaken', this._onDamaged.bind(this));
 		Hooks.on('a5e-longRest', this._onLongRest.bind(this));
-		// }
 	}
 
 	// =================================================================
@@ -128,7 +126,12 @@ class Concentrator {
 
 			if (!userId) roll = await Concentrator.rollConcentration(actor);
 			else
-				roll = await socket.executeAsUser('rollConcentration', userId, actor);
+				roll = await socket.executeAsUser(
+					'rollConcentration',
+					userId,
+					null,
+					actor.id
+				);
 		} else {
 			roll = await Concentrator.rollConcentration(actor);
 		}
@@ -189,8 +192,9 @@ class Concentrator {
 
 	// =================================================================
 	//                       Roll Concentration
-	static async rollConcentration(actor) {
-		console.log(actor);
+	static async rollConcentration(actor, actorID = null) {
+		if (!actor && actorID) actor = game.actors.get(actorID);
+
 		const dialogTitle = game.i18n.format('A5E.SavingThrowPromptTitle', {
 			name: actor.name,
 			ability: game.i18n.localize(CONFIG.A5E.abilities['con']),

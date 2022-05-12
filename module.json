@@ -25,6 +25,10 @@
     {
       "name": "lib-wrapper",
       "type": "module"
+    },
+    {
+      "name": "socketlib",
+      "type": "module"
     }
   ],
   "esmodules": [

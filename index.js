@@ -121,8 +121,11 @@ class Concentrator {
 
 		// Roll for concentration.
 		let roll = null;
+		const hp = actor.data.data.attributes.hp.value;
+		const unconscious = damage > hp;
 
-		if (actor.data.type == 'character') {
+		if (unconscious) roll = { total: 0 };
+		else if (actor.data.type == 'character') {
 			const user = game.users.filter(u => u.data.character === actor.id)[0];
 			const userId = user?.active ? user.data._id : null;
 
@@ -139,8 +142,7 @@ class Concentrator {
 		}
 
 		let msg = '';
-		const hp = actor.data.data.attributes.hp.value;
-		if (roll.total >= Math.max(10, Math.floor(damage / 2)) && hp > 0)
+		if (roll.total >= Math.max(10, Math.floor(damage / 2)))
 			msg += `Still maintaining concentration on ${preFlags.name}`;
 		else {
 			msg += `Concentration on ${preFlags?.name} broken.`;
@@ -177,7 +179,7 @@ class Concentrator {
 
 		// Update Flags, effects and Send Message.
 		await actor.setFlag(moduleName, 'concentrationData', concentrationData);
-		console.log(`Added Manual Effect on ${actor.data.name}`);
+		return;
 	}
 
 	// =================================================================
@@ -194,10 +196,7 @@ class Concentrator {
 			: false;
 
 		// Remove Flag
-		if (isConcentrating) {
-			await actor.unsetFlag(moduleName, 'concentrationData');
-			console.log(`Removed concentration on ${actor.data.name}.`);
-		}
+		if (isConcentrating) await actor.unsetFlag(moduleName, 'concentrationData');
 		return;
 	}
 

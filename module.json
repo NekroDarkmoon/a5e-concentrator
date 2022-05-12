@@ -37,9 +37,6 @@
   "scripts": [],
   "socket": true,
   "system": ["a5e"],
-  "styles": [
-    "/styles/concentrator.css"
-  ],
   "languages": [
     {
       "lang": "en",

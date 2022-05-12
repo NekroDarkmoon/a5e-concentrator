@@ -106,7 +106,7 @@ class Concentrator {
 
 		// Update Flags, effects and Send Message.
 		await actor.setFlag(moduleName, 'concentrationData', concentrationData);
-		// Update effects in the future.
+		// Update status effects.
 		await this._toggle_effect(actor, true);
 	}
 
@@ -125,8 +125,6 @@ class Concentrator {
 		if (actor.data.type == 'character') {
 			const user = game.users.filter(u => u.data.character === actor.id)[0];
 			const userId = user?.active ? user.data._id : null;
-
-			console.log(userId);
 
 			if (!userId) roll = await Concentrator.rollConcentration(actor);
 			else
@@ -165,7 +163,21 @@ class Concentrator {
 	async _onApplyManualEffect(activeEffect, options, id) {
 		// Check if effect is concentration
 		if (activeEffect.data.flags?.core?.statusId !== 'concentration') return;
-		console.log('yay');
+		const actor = activeEffect.parent;
+
+		// Check if concentrating
+		const preFlags = actor.getFlag(moduleName, 'concentrationData');
+		if (!preFlags) await actor.setFlag(moduleName, 'concentrationData', {});
+
+		// Create flag data
+		const concentrationData = {
+			name: 'Manual Effect',
+			isConcentrating: true,
+		};
+
+		// Update Flags, effects and Send Message.
+		await actor.setFlag(moduleName, 'concentrationData', concentrationData);
+		console.log(`Added Manual Effect on ${actor.data.name}`);
 	}
 
 	// =================================================================
@@ -173,10 +185,9 @@ class Concentrator {
 	async _onRemoveManualEffect(activeEffect, options, id) {
 		// Check if effect is concentration
 		if (activeEffect.data.flags?.core?.statusId !== 'concentration') return;
-		console.log('yay');
 		const actor = activeEffect.parent;
 
-		// Remove flag if concentrating.
+		// Check if concentrating.
 		const preFlags = actor.getFlag(moduleName, 'concentrationData');
 		const isConcentrating = preFlags?.isConcentrating
 			? preFlags.isConcentrating
@@ -228,7 +239,6 @@ class Concentrator {
 	//                       Roll Concentration
 	static async rollConcentration(actor, actorID = null) {
 		if (!actor && actorID) actor = game.actors.get(actorID);
-		console.log(actor);
 
 		const dialogTitle = game.i18n.format('A5E.SavingThrowPromptTitle', {
 			name: actor.name,

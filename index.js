@@ -143,9 +143,9 @@ class Concentrator {
 
 		let msg = '';
 		if (roll.total >= Math.max(10, Math.floor(damage / 2)))
-			msg += `Still maintaining concentration on ${preFlags.name}`;
+			msg += `${actor.data.name} maintained concentration on ${preFlags.name}`;
 		else {
-			msg += `Concentration on ${preFlags?.name} broken.`;
+			msg += `${actor.data.name} dropped concentration on ${preFlags?.name}.`;
 			await actor.unsetFlag(moduleName, 'concentrationData');
 			// Remove effect
 			await this._toggle_effect(actor, false);
@@ -178,7 +178,8 @@ class Concentrator {
 		};
 
 		// Update Flags, effects and Send Message.
-		await actor.setFlag(moduleName, 'concentrationData', concentrationData);
+		if (!preFlags)
+			await actor.setFlag(moduleName, 'concentrationData', concentrationData);
 		return;
 	}
 

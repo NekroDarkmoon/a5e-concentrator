@@ -66,24 +66,23 @@ Hooks.once('ready', async function () {
 class Concentrator {
 	constructor() {
 		Hooks.on('a5e-concentrationRolled', this._handleConcentration.bind(this));
-
 		Hooks.on('a5e-damageTaken', this._onDamaged.bind(this));
 		Hooks.on('a5e-longRest', this._onLongRest.bind(this));
 	}
 
 	// =================================================================
 	//                       Handle Concentration
-	async _handleConcentration(_actor, _item) {
+	async _handleConcentration(actor, item) {
 		// Check if actor is concentrating
-		const preFlags = _actor.getFlag(moduleName, 'concentrationData');
+		const preFlags = actor.getFlag(moduleName, 'concentrationData');
 		let isConcentrating = false;
 
 		if (preFlags) isConcentrating = preFlags.isConcentrating;
-		else await _actor.setFlag(moduleName, 'concentrationData', {});
+		else await actor.setFlag(moduleName, 'concentrationData', {});
 
 		if (isConcentrating) {
 			// Drop concentration on old
-			const msg = `${_actor.data.name} dropped concentration on ${preFlags.name}.`;
+			const msg = `${actor.data.name} dropped concentration on ${preFlags.name}.`;
 			const msgData = {
 				speaker: { alias: 'Concentrator' },
 				content: msg,
@@ -93,19 +92,19 @@ class Concentrator {
 			setTimeout(async _ => await ChatMessage.create(msgData), 0);
 
 			// Remove template and effects in the future.
-			await this._toggle_effect(_actor, false);
+			await this._toggle_effect(actor, false);
 		}
 
 		// Create flag data
 		const concentrationData = {
-			name: `${_item.data.name}`,
+			name: `${item.data.name}`,
 			isConcentrating: true,
 		};
 
 		// Update Flags, effects and Send Message.
-		await _actor.setFlag(moduleName, 'concentrationData', concentrationData);
+		await actor.setFlag(moduleName, 'concentrationData', concentrationData);
 		// Update effects in the future.
-		await this._toggle_effect(_actor, true);
+		await this._toggle_effect(actor, true);
 	}
 
 	// =================================================================
@@ -123,6 +122,8 @@ class Concentrator {
 		if (actor.data.type == 'character') {
 			const user = game.users.filter(u => u.data.character === actor.id)[0];
 			const userId = user?.active ? user.data._id : null;
+
+			console.log(userId);
 
 			if (!userId) roll = await Concentrator.rollConcentration(actor);
 			else
@@ -194,6 +195,7 @@ class Concentrator {
 	//                       Roll Concentration
 	static async rollConcentration(actor, actorID = null) {
 		if (!actor && actorID) actor = game.actors.get(actorID);
+		console.log(actor);
 
 		const dialogTitle = game.i18n.format('A5E.SavingThrowPromptTitle', {
 			name: actor.name,
@@ -241,6 +243,7 @@ class Concentrator {
 		ChatMessage.create(chatData);
 		return roll;
 	}
+
 	// TODO: On effect add and remove
 }
 

@@ -313,7 +313,7 @@ function itemRolledHook(wrapped, data) {
 	const actor = this;
 	const item = actor.items.get(data.id);
 
-	if (item.data.data.concentration)
+	if (item?.data?.data?.concentration)
 		Hooks.callAll('a5e-concentrationRolled', actor, item);
 
 	return wrapped(data);

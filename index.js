@@ -100,7 +100,6 @@ class Concentrator {
 			setTimeout(async _ => await ChatMessage.create(msgData), 0);
 
 			// Remove template and effects in the future.
-			await this._toggle_effect(actor, false);
 		}
 
 		// Create flag data
@@ -111,6 +110,7 @@ class Concentrator {
 
 		// Update Flags, effects and Send Message.
 		await actor.setFlag(moduleName, 'concentrationData', concentrationData);
+
 		// Update status effects.
 		await this._toggle_effect(actor, true);
 	}
@@ -181,6 +181,9 @@ class Concentrator {
 		// Check if concentrating
 		const preFlags = actor.getFlag(moduleName, 'concentrationData');
 		if (!preFlags) await actor.setFlag(moduleName, 'concentrationData', {});
+
+		// Return if already concentrating.
+		if (preFlags?.isConcentrating) return;
 
 		// Create flag data
 		const concentrationData = {

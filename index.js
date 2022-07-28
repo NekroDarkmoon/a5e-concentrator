@@ -43,22 +43,7 @@ Hooks.once('ready', async function () {
 		'WRAPPER'
 	);
 
-	libWrapper.register(
-		moduleName,
-		'CONFIG.Actor.documentClass.prototype.applyDamage',
-		applyDamageHook,
-		'WRAPPER'
-	);
-
-	libWrapper.register(
-		moduleName,
-		'CONFIG.Actor.documentClass.prototype.restoreSpellResources',
-		triggerRestHook,
-		'WRAPPER'
-	);
-
 	new Concentrator();
-
 	console.log(`${moduleTag} | Ready.`);
 });
 
@@ -68,8 +53,8 @@ Hooks.once('ready', async function () {
 class Concentrator {
 	constructor() {
 		Hooks.on('a5e-concentrationRolled', this._handleConcentration.bind(this));
-		Hooks.on('a5e-damageTaken', this._onDamaged.bind(this));
-		Hooks.on('a5e-longRest', this._onLongRest.bind(this));
+		Hooks.on('a5e.actorDamaged', this._onDamaged.bind(this));
+		Hooks.on('a5e.triggerRest', this._onLongRest.bind(this));
 		Hooks.on('createActiveEffect', this._onApplyManualEffect.bind(this));
 		Hooks.on('deleteActiveEffect', this._onRemoveManualEffect.bind(this));
 	}
@@ -87,7 +72,7 @@ class Concentrator {
 		if (isConcentrating) {
 			// Drop concentration on old
 			const msg = game.i18n.format('concentrator.droppedMessage', {
-				name: actor.data.name,
+				name: actor.name,
 				item: preFlags.name,
 			});
 
@@ -104,7 +89,7 @@ class Concentrator {
 
 		// Create flag data
 		const concentrationData = {
-			name: `${item.data.name}`,
+			name: `${item.name}`,
 			isConcentrating: true,
 		};
 
@@ -117,7 +102,10 @@ class Concentrator {
 
 	// =================================================================
 	//                       			On damage
-	async _onDamaged(actor, damage) {
+	async _onDamaged(actor, damageData) {
+		// Variables
+		const damage = damageData.damage;
+
 		// Check if concentrating.
 		const preFlags = actor.getFlag(moduleName, 'concentrationData');
 		if (!preFlags) return;
@@ -126,13 +114,13 @@ class Concentrator {
 
 		// Roll for concentration.
 		let roll = null;
-		const hp = actor.data.data.attributes.hp.value;
+		const hp = actor.system.attributes.hp.value;
 		const unconscious = damage > hp;
 
 		if (unconscious) roll = { total: 0 };
-		else if (actor.data.type == 'character') {
-			const user = game.users.filter(u => u.data.character === actor.id)[0];
-			const userId = user?.active ? user.data._id : null;
+		else if (actor.type == 'character') {
+			const user = game.users.filter(u => u.character === actor.id)[0];
+			const userId = user?.active ? user._id : null;
 
 			if (!userId) roll = await Concentrator.rollConcentration(actor);
 			else
@@ -149,12 +137,12 @@ class Concentrator {
 		let msg = '';
 		if (roll.total >= Math.max(10, Math.floor(damage / 2)))
 			msg = game.i18n.format('concentrator.maintainedMessage', {
-				name: actor.data.name,
+				name: actor.name,
 				item: preFlags.name,
 			});
 		else {
 			msg = game.i18n.format('concentrator.droppedMessage', {
-				name: actor.data.name,
+				name: actor.name,
 				item: preFlags.name,
 			});
 			await actor.unsetFlag(moduleName, 'concentrationData');
@@ -175,7 +163,7 @@ class Concentrator {
 	//               On Add Active Effect - Manual
 	async _onApplyManualEffect(activeEffect, options, id) {
 		// Check if effect is concentration
-		if (activeEffect.data.flags?.core?.statusId !== 'concentration') return;
+		if (activeEffect.flags?.core?.statusId !== 'concentration') return;
 		const actor = activeEffect.parent;
 
 		// Check if concentrating
@@ -201,7 +189,7 @@ class Concentrator {
 	//               On Remove Active Effect - Manual
 	async _onRemoveManualEffect(activeEffect, options, id) {
 		// Check if effect is concentration
-		if (activeEffect.data.flags?.core?.statusId !== 'concentration') return;
+		if (activeEffect.flags?.core?.statusId !== 'concentration') return;
 		const actor = activeEffect.parent;
 
 		// Check if concentrating.
@@ -217,7 +205,9 @@ class Concentrator {
 
 	// =================================================================
 	//                       On Long Rest
-	async _onLongRest(actor) {
+	async _onLongRest(actor, restData) {
+		if (restData.restType !== 'long') return;
+
 		// Reset data
 		await actor.unsetFlag(moduleName, 'concentrationData');
 		// Remove effect
@@ -229,18 +219,15 @@ class Concentrator {
 	async _toggle_effect(actor, trigger) {
 		let token;
 
-		if (actor.data.type === 'npc') token = actor.parent;
-		else
-			token = canvas.scene.tokens.filter(
-				t => t.data.actorId === actor.data._id
-			)[0];
+		if (actor.type === 'npc') token = actor.parent;
+		else token = canvas.scene.tokens.filter(t => t.actorId === actor._id)[0];
 
 		// Check if already active
-		const statusEffects = actor.data.effects;
+		const statusEffects = actor.effects;
 		let exists = false;
 
 		statusEffects.forEach(e => {
-			const id = e?.data?.flags?.core?.statusId;
+			const id = e?.flags?.core?.statusId;
 			if (id === 'concentration') exists = true;
 		});
 
@@ -316,20 +303,8 @@ function itemRolledHook(wrapped, data) {
 	const actor = this;
 	const item = actor.items.get(data.id);
 
-	if (item?.data?.data?.concentration)
+	if (item?.system?.concentration)
 		Hooks.callAll('a5e-concentrationRolled', actor, item);
 
 	return wrapped(data);
-}
-
-function applyDamageHook(wrapped, damage) {
-	const actor = this;
-	Hooks.callAll('a5e-damageTaken', actor, damage);
-	return wrapped(damage);
-}
-
-function triggerRestHook(wrapped, restType) {
-	const actor = this;
-	Hooks.callAll('a5e-longRest', actor);
-	return wrapped(restType);
 }

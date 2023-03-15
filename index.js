@@ -33,9 +33,12 @@ Hooks.once('ready', async function () {
 //                                   	Concentrator
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 class Concentrator {
+  #CONCENTRATING = 'isConcentrating';
+  #ITEM_NAME = 'itemName';
+
 	constructor() {
 		Hooks.on('a5e.itemActivate', this.#onItemActivate.bind(this));
-		Hooks.on('a5e.actorDamaged', this._onDamaged.bind(this));
+		Hooks.on('a5e.actorDamaged', this.#onDamaged.bind(this));
 		Hooks.on('a5e.triggerRest', this._onLongRest.bind(this));
 		Hooks.on('createActiveEffect', this._onApplyManualEffect.bind(this));
 		Hooks.on('deleteActiveEffect', this._onRemoveManualEffect.bind(this));
@@ -50,14 +53,14 @@ class Concentrator {
 	//                       Handle Concentration
 	async #handleConcentration(actor, item) {
     // Check if already concentrating
-    const isConcentrating = actor.getFlag(moduleName, 'isConcentrating');
+    const isConcentrating = actor.getFlag(moduleName, this.#CONCENTRATING);
 
     // Drop Concentration if already concentrating.
     if (isConcentrating) {
       const chatData = {
         speaker: { alias: 'Concentrator' },
         content: game.i18n.format('concentrator.droppedMessage', {
-          name: actor.name, item: actor.getFlag(moduleName, 'itemName')
+          name: actor.name, item: actor.getFlag(moduleName, this.#ITEM_NAME)
         }),
         type: CONST.CHAT_MESSAGE_TYPES.OTHER,
       };
@@ -74,61 +77,49 @@ class Concentrator {
 
 	// =================================================================
 	//                       			On damage
-	async _onDamaged(actor, damageData) {
-		// Variables
-		const damage = damageData.damage;
+	async #onDamaged(actor, data) {
+    const damage = data.damage;
+    const isConcentrating = actor.getFlag(moduleName, this.#CONCENTRATING)
 
-		// Check if concentrating.
-		const preFlags = actor.getFlag(moduleName, 'concentrationData');
-		if (!preFlags) return;
+    if (!isConcentrating) return;
 
-		if (!preFlags?.isConcentrating) return;
+    // Prompt for concentration 
+    let roll = null;
+    const hp = actor.system.attributes.hp.value;
+    const threshold = Math.max(10, Math.floor(damage / 2));
 
-		// Roll for concentration.
-		let roll = null;
-		const hp = actor.system.attributes.hp.value;
-		const unconscious = damage > hp;
+    if (damage > hp) roll = { total: 0 };
+    else if ( actor.type === 'character' ) {
+      const user = game.users.filter((u) => u.character === actor.id)[0];
+      const userId = user?.active ? user.id : null;
 
-		if (unconscious) roll = { total: 0 };
-		else if (actor.type == 'character') {
-			const user = game.users.filter(u => u.character === actor.id)[0];
-			const userId = user?.active ? user._id : null;
+      if (!userId) roll = await Concentrator.rollConcentration(actor);
+      else roll = await socket.executeAsUser('rollConcentration', userId, null, actor.id);
+    } else {
+      roll = await Concentrator.rollConcentration(actor);
+    }
 
-			if (!userId) roll = await Concentrator.rollConcentration(actor);
-			else
-				roll = await socket.executeAsUser(
-					'rollConcentration',
-					userId,
-					null,
-					actor.id
-				);
-		} else {
-			roll = await Concentrator.rollConcentration(actor);
-		}
-
-		let msg = '';
-		if (roll.total >= Math.max(10, Math.floor(damage / 2)))
-			msg = game.i18n.format('concentrator.maintainedMessage', {
-				name: actor.name,
-				item: preFlags.name,
+    const msg = (roll.total >= threshold)
+      ? game.i18n.format('concentrator.maintainedMessage', {
+				name: actor.name, item: actor.getFlag(moduleName, this.#ITEM_NAME),
+      })
+      : game.i18n.format('concentrator.droppedMessage', {
+				name: actor.name, item: actor.getFlag(moduleName, this.#ITEM_NAME),
 			});
-		else {
-			msg = game.i18n.format('concentrator.droppedMessage', {
-				name: actor.name,
-				item: preFlags.name,
-			});
-			await actor.unsetFlag(moduleName, 'concentrationData');
-			// Remove effect
-			await this._toggle_effect(actor, false);
-		}
 
-		const msgData = {
+    if (roll.total < threshold) {
+      await actor.setFlag(moduleName, this.#CONCENTRATING, false);
+      await actor.setFlag(moduleName, this.#ITEM_NAME, "");
+      await this.#toggleEffect(actor, false);
+    }
+		
+		const chatData = {
 			speaker: { alias: 'Concentrator' },
 			content: msg,
 			type: CONST.CHAT_MESSAGE_TYPES.OTHER,
 		};
 
-		setTimeout(async _ => await ChatMessage.create(msgData), 0);
+		setTimeout(async _ => await ChatMessage.create(chatData), 0);
 	}
 
 	// =================================================================
@@ -213,54 +204,9 @@ class Concentrator {
 	static async rollConcentration(actor, actorID = null) {
 		if (!actor && actorID) actor = game.actors.get(actorID);
 
-		const dialogTitle = game.i18n.format('A5E.SavingThrowPromptTitle', {
-			name: actor.name,
-			ability: game.i18n.localize(CONFIG.A5E.abilities['con']),
-		});
-
-		const checkData = await game.a5e.utils.getDialogData(
-			game.a5e.vue.AbilityDialog,
-			{
-				title: dialogTitle,
-				props: {
-					actor,
-					ability: 'con',
-					isSave: true,
-					isConcentrationCheck: true,
-				},
-			}
-		);
-
-		if (checkData === null) return;
-
-		const { formula } = checkData;
-		const roll = await new CONFIG.Dice.D20Roll(formula).roll({ async: true });
-
-		const chatData = {
-			user: game.user?.id,
-			speaker: ChatMessage.getSpeaker({ actor }),
-			type: CONST.CHAT_MESSAGE_TYPES.ROLL,
-			sound: CONFIG.sounds.dice,
-			roll,
-			content: await renderTemplate(
-				'systems/a5e/templates/chat/ability-check.hbs',
-				{
-					title: game.i18n.format('A5E.SavingThrowSpecific', {
-						ability: game.i18n.localize(CONFIG.A5E.abilities['con']),
-					}),
-					img: actor.img,
-					formula: roll.formula,
-					tooltip: await roll.getTooltip(),
-					total: roll.total,
-				}
-			),
-		};
-
-		ChatMessage.create(chatData);
-		return roll;
+    const chatData = await actor.rollSavingThrow('con', {saveType: 'concentration'});
+    return chatData.rolls[0];
 	}
-
-	// TODO: On effect add and remove
 }
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

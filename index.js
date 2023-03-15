@@ -145,12 +145,10 @@ class Concentrator {
 		// Check if already active
 		const statusEffects = actor.effects;
     
-    const exists = statusEffects.findIndex(
-      (e) => e.flags?.core?.statusId === 'concentration'
-    ) > -1;
+    const exists = statusEffects.find((e) => e.flags?.core?.statusId === 'concentration') 
+      ? true 
+      : false;
     
-    console.log(exists);
-
 		if (exists === trigger) return;
 		await token.toggleActiveEffect(this.#STATUS_EFFECT);
 	}

@@ -24,7 +24,7 @@
       "type": "system",
       "manifest": "https://raw.githubusercontent.com/Pjb518/FoundryVTT-Level-Up-Official/main/public/system.json",
       "compatibility": {
-        "minimum": "0.8.0"
+        "minimum": "0.8.20"
       }
     }],
     "requires": [{
@@ -58,9 +58,5 @@
       "type": "icon",
       "url": "https://avatars2.githubusercontent.com/u/71292812?s=400&u=ccdb4eeb7abf551ca8f314e5a9bfd0479a4d3d41&v=4"
     }
-  ],
-
-  "name": "a5e-concentrator",
-  "minimumCoreVersion": "10",
-  "compatibleCoreVersion": "10"
+  ]
 }

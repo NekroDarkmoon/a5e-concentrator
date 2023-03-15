@@ -157,48 +157,31 @@ class Concentrator {
 	//               On Add Active Effect - Manual
 	async _onApplyManualEffect(activeEffect, options, id) {
     if (game.user.id !== id ) return;
-
-		// Check if effect is concentration
 		if (activeEffect.flags?.core?.statusId !== 'concentration') return;
+    
 		const actor = activeEffect.parent;
 
-		// Check if concentrating
-		const preFlags = actor.getFlag(moduleName, 'concentrationData');
-		if (!preFlags) await actor.setFlag(moduleName, 'concentrationData', {});
-
-		// Return if already concentrating.
-		if (preFlags?.isConcentrating) return;
-
-		// Create flag data
-		const concentrationData = {
-			name: game.i18n.localize('concentrator.manualEffectLabel'),
-			isConcentrating: true,
-		};
-
-		// Update Flags, effects and Send Message.
-		if (!preFlags)
-			await actor.setFlag(moduleName, 'concentrationData', concentrationData);
-		return;
+    await actor.setFlag(moduleName, this.#CONCENTRATING, true);
+    await actor.setFlag(moduleName, this.#ITEM_NAME, "");
 	}
 
 	// =================================================================
 	//               On Remove Active Effect - Manual
 	async _onRemoveManualEffect(activeEffect, options, id) {
     if (game.user.id !== id ) return;
-
-		// Check if effect is concentration
 		if (activeEffect.flags?.core?.statusId !== 'concentration') return;
-		const actor = activeEffect.parent;
 
-		// Check if concentrating.
-		const preFlags = actor.getFlag(moduleName, 'concentrationData');
-		const isConcentrating = preFlags?.isConcentrating
-			? preFlags.isConcentrating
-			: false;
+		const actor = activeEffect.parent;
+		const isConcentrating = actor.getFlag(moduleName, this.#CONCENTRATING);
+    if (!isConcentrating) return;
 
 		// Remove Flag
-		if (isConcentrating) await actor.unsetFlag(moduleName, 'concentrationData');
-		return;
+    await actor.setFlag(moduleName, this.#CONCENTRATING, false);
+    await actor.setFlag(
+      moduleName,
+      this.#ITEM_NAME,
+      game.i18n.localize("concentrator.manualEffectLabel")
+    );
 	}
 
 	// =================================================================

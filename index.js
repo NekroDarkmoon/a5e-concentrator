@@ -16,17 +16,6 @@ Hooks.once('init', async function () {
 
 Hooks.once('setup', async function () {
 	console.log(`${moduleTag} | Setup Complete.`);
-
-	// Add statusEffect
-	effect = {
-		changes: [],
-		duration: {},
-		flags: {},
-		icon: 'icons/svg/aura.svg',
-		id: 'concentration',
-		label: game.i18n.localize('concentrator.effectLabel'),
-	};
-	CONFIG.statusEffects.push(effect);
 });
 
 // Add Socket Information

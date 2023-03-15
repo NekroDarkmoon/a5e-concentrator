@@ -35,8 +35,11 @@ Hooks.once('ready', async function () {
 class Concentrator {
   #CONCENTRATING = 'isConcentrating';
   #ITEM_NAME = 'itemName';
+  #STATUS_EFFECT;
 
 	constructor() {
+    this.#STATUS_EFFECT = CONFIG.statusEffects.find((effect) => effect.id === 'concentration');
+
 		Hooks.on('a5e.itemActivate', this.#onItemActivate.bind(this));
 		Hooks.on('a5e.actorDamaged', this.#onDamaged.bind(this));
 		Hooks.on('a5e.restComplete', this.#onLongRest.bind(this));
@@ -132,9 +135,31 @@ class Concentrator {
     await this.#toggleEffect(actor, false);
 	}
 
+  // =================================================================
+	//                       Roll Concentration
+	async #toggleEffect(actor, trigger) {
+		const token = (actor.type === 'npc') 
+      ? actor.parent
+      : canvas.scene.tokens.filter(t => t.actorId === actor._id)[0];
+
+		// Check if already active
+		const statusEffects = actor.effects;
+    
+    const exists = statusEffects.findIndex(
+      (e) => e.flags?.core?.statusId === 'concentration'
+    ) > -1;
+    
+    console.log(exists);
+
+		if (exists === trigger) return;
+		await token.toggleActiveEffect(this.#STATUS_EFFECT);
+	}
+
 	// =================================================================
 	//               On Add Active Effect - Manual
 	async _onApplyManualEffect(activeEffect, options, id) {
+    if (game.user.id !== id ) return;
+
 		// Check if effect is concentration
 		if (activeEffect.flags?.core?.statusId !== 'concentration') return;
 		const actor = activeEffect.parent;
@@ -161,6 +186,8 @@ class Concentrator {
 	// =================================================================
 	//               On Remove Active Effect - Manual
 	async _onRemoveManualEffect(activeEffect, options, id) {
+    if (game.user.id !== id ) return;
+
 		// Check if effect is concentration
 		if (activeEffect.flags?.core?.statusId !== 'concentration') return;
 		const actor = activeEffect.parent;
@@ -178,28 +205,6 @@ class Concentrator {
 
 	// =================================================================
 	//                       Roll Concentration
-	async #toggleEffect(actor, trigger) {
-		let token;
-
-		if (actor.type === 'npc') token = actor.parent;
-		else token = canvas.scene.tokens.filter(t => t.actorId === actor._id)[0];
-
-		// Check if already active
-		const statusEffects = actor.effects;
-		let exists = false;
-
-		statusEffects.forEach(e => {
-			const id = e?.flags?.core?.statusId;
-			if (id === 'concentration') exists = true;
-		});
-
-		if (exists === trigger) return;
-
-		await token.toggleActiveEffect(effect);
-	}
-
-	// =================================================================
-	//                       Roll Concentration
 	static async rollConcentration(actor, actorID = null) {
 		if (!actor && actorID) actor = game.actors.get(actorID);
 
@@ -207,11 +212,3 @@ class Concentrator {
     return chatData.rolls[0];
 	}
 }
-
-// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-//                                   	Concentrator
-// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-//                                   	 Dummy Hooks
-// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

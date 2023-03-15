@@ -39,12 +39,12 @@ class Concentrator {
 	constructor() {
 		Hooks.on('a5e.itemActivate', this.#onItemActivate.bind(this));
 		Hooks.on('a5e.actorDamaged', this.#onDamaged.bind(this));
-		Hooks.on('a5e.triggerRest', this._onLongRest.bind(this));
+		Hooks.on('a5e.restComplete', this.#onLongRest.bind(this));
 		Hooks.on('createActiveEffect', this._onApplyManualEffect.bind(this));
 		Hooks.on('deleteActiveEffect', this._onRemoveManualEffect.bind(this));
 	}
 
-  #onItemActivate(item, data) {
+  #onItemActivate(item) {
     if (!item.system.concentration) return;
     this.#handleConcentration(item.parent, item);
   } 
@@ -122,6 +122,16 @@ class Concentrator {
 		setTimeout(async _ => await ChatMessage.create(chatData), 0);
 	}
 
+  // =================================================================
+	//                       On Long Rest
+	async #onLongRest(actor, restData) {
+		if (restData.restType !== 'long') return;
+
+    await actor.setFlag(moduleName, this.#CONCENTRATING, false);
+    await actor.setFlag(moduleName, this.#ITEM_NAME, "");
+    await this.#toggleEffect(actor, false);
+	}
+
 	// =================================================================
 	//               On Add Active Effect - Manual
 	async _onApplyManualEffect(activeEffect, options, id) {
@@ -164,17 +174,6 @@ class Concentrator {
 		// Remove Flag
 		if (isConcentrating) await actor.unsetFlag(moduleName, 'concentrationData');
 		return;
-	}
-
-	// =================================================================
-	//                       On Long Rest
-	async _onLongRest(actor, restData) {
-		if (restData.restType !== 'long') return;
-
-		// Reset data
-		await actor.unsetFlag(moduleName, 'concentrationData');
-		// Remove effect
-		await this._toggle_effect(actor, false);
 	}
 
 	// =================================================================

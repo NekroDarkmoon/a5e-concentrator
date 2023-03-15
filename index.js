@@ -25,13 +25,6 @@ Hooks.once('socketlib.ready', () => {
 });
 
 Hooks.once('ready', async function () {
-	libWrapper.register(
-		moduleName,
-		'CONFIG.Actor.documentClass.prototype.constructItemCard',
-		itemRolledHook,
-		'WRAPPER'
-	);
-
 	new Concentrator();
 	console.log(`${moduleTag} | Ready.`);
 });
@@ -41,53 +34,43 @@ Hooks.once('ready', async function () {
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 class Concentrator {
 	constructor() {
-		Hooks.on('a5e-concentrationRolled', this._handleConcentration.bind(this));
+		Hooks.on('a5e.itemActivate', this.#onItemActivate.bind(this));
 		Hooks.on('a5e.actorDamaged', this._onDamaged.bind(this));
 		Hooks.on('a5e.triggerRest', this._onLongRest.bind(this));
 		Hooks.on('createActiveEffect', this._onApplyManualEffect.bind(this));
 		Hooks.on('deleteActiveEffect', this._onRemoveManualEffect.bind(this));
 	}
 
+  #onItemActivate(item, data) {
+    if (!item.system.concentration) return;
+    this.#handleConcentration(item.parent, item);
+  } 
+
 	// =================================================================
 	//                       Handle Concentration
-	async _handleConcentration(actor, item) {
-		// Check if actor is concentrating
-		const preFlags = actor.getFlag(moduleName, 'concentrationData');
-		let isConcentrating = false;
+	async #handleConcentration(actor, item) {
+    // Check if already concentrating
+    const isConcentrating = actor.getFlag(moduleName, 'isConcentrating');
 
-		if (preFlags) isConcentrating = preFlags.isConcentrating;
-		else await actor.setFlag(moduleName, 'concentrationData', {});
+    // Drop Concentration if already concentrating.
+    if (isConcentrating) {
+      const chatData = {
+        speaker: { alias: 'Concentrator' },
+        content: game.i18n.format('concentrator.droppedMessage', {
+          name: actor.name, item: actor.getFlag(moduleName, 'itemName')
+        }),
+        type: CONST.CHAT_MESSAGE_TYPES.OTHER,
+      };
 
-		if (isConcentrating) {
-			// Drop concentration on old
-			const msg = game.i18n.format('concentrator.droppedMessage', {
-				name: actor.name,
-				item: preFlags.name,
-			});
+      setTimeout(async _ => await ChatMessage.create(chatData), 0);
+    }
+    
+    // Add data for new concentration item
+    await actor.setFlag(moduleName, 'isConcentrating', true);
+    await actor.setFlag(moduleName, 'itemName', item.name);
 
-			const msgData = {
-				speaker: { alias: 'Concentrator' },
-				content: msg,
-				type: CONST.CHAT_MESSAGE_TYPES.OTHER,
-			};
-
-			setTimeout(async _ => await ChatMessage.create(msgData), 0);
-
-			// Remove template and effects in the future.
-		}
-
-		// Create flag data
-		const concentrationData = {
-			name: `${item.name}`,
-			isConcentrating: true,
-		};
-
-		// Update Flags, effects and Send Message.
-		await actor.setFlag(moduleName, 'concentrationData', concentrationData);
-
-		// Update status effects.
-		await this._toggle_effect(actor, true);
-	}
+    await this.#toggleEffect(actor, true);
+  }
 
 	// =================================================================
 	//                       			On damage
@@ -205,7 +188,7 @@ class Concentrator {
 
 	// =================================================================
 	//                       Roll Concentration
-	async _toggle_effect(actor, trigger) {
+	async #toggleEffect(actor, trigger) {
 		let token;
 
 		if (actor.type === 'npc') token = actor.parent;
@@ -287,13 +270,3 @@ class Concentrator {
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //                                   	 Dummy Hooks
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-function itemRolledHook(wrapped, data) {
-	// Create hook for activateItem
-	const actor = this;
-	const item = actor.items.get(data.id);
-
-	if (item?.system?.concentration)
-		Hooks.callAll('a5e-concentrationRolled', actor, item);
-
-	return wrapped(data);
-}

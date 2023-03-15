@@ -160,9 +160,15 @@ class Concentrator {
 		if (activeEffect.flags?.core?.statusId !== 'concentration') return;
     
 		const actor = activeEffect.parent;
+    // Early exit to prevent rename
+    if (actor.getFlag(moduleName, this.#CONCENTRATING)) return;
 
     await actor.setFlag(moduleName, this.#CONCENTRATING, true);
-    await actor.setFlag(moduleName, this.#ITEM_NAME, "");
+    await actor.setFlag(
+      moduleName,
+      this.#ITEM_NAME,
+      game.i18n.localize("concentrator.manualEffectLabel")
+    );
 	}
 
 	// =================================================================
@@ -172,16 +178,13 @@ class Concentrator {
 		if (activeEffect.flags?.core?.statusId !== 'concentration') return;
 
 		const actor = activeEffect.parent;
+    console.log(actor);
 		const isConcentrating = actor.getFlag(moduleName, this.#CONCENTRATING);
     if (!isConcentrating) return;
 
 		// Remove Flag
     await actor.setFlag(moduleName, this.#CONCENTRATING, false);
-    await actor.setFlag(
-      moduleName,
-      this.#ITEM_NAME,
-      game.i18n.localize("concentrator.manualEffectLabel")
-    );
+    await actor.setFlag(moduleName, this.#ITEM_NAME, "");
 	}
 
 	// =================================================================

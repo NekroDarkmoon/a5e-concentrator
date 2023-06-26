@@ -15,26 +15,25 @@
   ],
   "compatibility": {
     "minimum": 10,
-    "verified": 10,
-    "maximum": 10
+    "verified": 11,
+    "maximum": 11
   },
   "relationships": {
-    "systems": [{
-      "id": "a5e",
-      "type": "system",
-      "manifest": "https://raw.githubusercontent.com/Pjb518/FoundryVTT-Level-Up-Official/main/public/system.json",
-      "compatibility": {
-        "minimum": "0.9.0"
+    "systems": [
+      {
+        "id": "a5e",
+        "type": "system",
+        "manifest": "https://raw.githubusercontent.com/Pjb518/FoundryVTT-Level-Up-Official/main/public/system.json",
+        "compatibility": {
+          "minimum": "0.9.0"
+        }
       }
-    }],
-    "requires": [{
-      "id": "lib-wrapper",
-      "type": "module"
-    },
-    {
-      "id": "socketlib",
-      "type": "module"
-    }  
+    ],
+    "requires": [
+      {
+        "id": "socketlib",
+        "type": "module"
+      }
     ]
   },
   "esmodules": [
@@ -42,7 +41,6 @@
   ],
   "scripts": [],
   "socket": true,
-  "system": ["a5e"],
   "languages": [
     {
       "lang": "en",
